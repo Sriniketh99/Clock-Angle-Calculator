@@ -1,80 +1,46 @@
-import tkinter as tk
+import streamlit as st
 import re
 
-def comp(s):
-    for i, char in enumerate(s):
-        if char == ':':
-            return i
-    return -1
-
-def conv_to_int(c):
-    return ord(c) - ord('0')
-
-def find_hr(s):
-    len_hr = comp(s)
-    sum_hr = 0
-    for i in range(len_hr):
-        sum_hr += conv_to_int(s[i]) * (10 ** (len_hr - i - 1))
-    return sum_hr
-
-def find_min(s):
-    j = comp(s)
-    len_min = len(s)
-    sum_min = 0
-    for i in range(j + 1, len_min):
-        sum_min += conv_to_int(s[i]) * (10 ** (len_min - i - 1))
-    return sum_min
-
-def calc(a, b):
-    if b < 60:
-        hr_angle = a % 12 * 30 + float(b) / 2.0
-        min_angle = 6 * b
-    else:
-        hr_angle = (a + 1) % 12 * 30 + float(b - 60) / 2.0
-        min_angle = 6 * (b - 60)
-
-    deg = min_angle - hr_angle
-    if abs(deg) > 180:
-        return 360.0 - abs(deg)
-    return abs(deg)
-def equals():
-    s = entry.get()
-    if not re.match(r"^\d{1,2}:\d{1,2}$", s):
-        equation_label.set("Enter a valid time (HH:MM)")
-        return
+# Function to find hour and minutes from input string
+def parse_time(s):
+    match = re.match(r"^(\d{1,2}):(\d{1,2})$", s)
+    if not match:
+        return None, None
     
-    h = find_hr(s)
-    m = find_min(s)
+    h, m = int(match.group(1)), int(match.group(2))
+    return h, m
 
-    if 0 <= h < 24 and 0 <= m < 60:
-        angle = calc(h, m)
-        equation_label.set(f"Angle: {angle:.2f}°")
+# Function to calculate angle
+def calculate_angle(hour, minute):
+    if not (0 <= hour < 24 and 0 <= minute < 60):
+        return None
+
+    # Convert 24-hour format to 12-hour format
+    hour = hour % 12
+
+    hr_angle = (hour * 30) + (minute * 0.5)
+    min_angle = minute * 6
+
+    # Find the smaller angle
+    angle = abs(hr_angle - min_angle)
+    return min(angle, 360 - angle)
+
+# Streamlit UI
+st.title("⏰ Clock Angle Calculator")
+st.write("Enter a time in **HH:MM** format to calculate the angle between the hour and minute hands.")
+
+# User input box
+user_input = st.text_input("Enter time (HH:MM)", placeholder="E.g. 03:15")
+
+# Button to calculate
+if st.button("Calculate Angle"):
+    hour, minute = parse_time(user_input)
+    
+    if hour is None or minute is None:
+        st.error("❌ Invalid format! Please enter time as HH:MM.")
     else:
-        equation_label.set("Invalid time input")
-def clear():
-    entry.delete(0, tk.END)
-    equation_label.set("")
-
-root = tk.Tk()
-root.title("Clock Angle Calculator")
-root.geometry("400x300")
-root.config(background="#ccddff")
-
-equation_label = tk.StringVar()
-equation_label.set("Enter time (HH:MM)")
-
-label = tk.Label(root, textvariable=equation_label, font=('Times New Roman', 16), bg='white', width=30, height=2)
-label.pack(pady=10)
-
-entry = tk.Entry(root, font=('Times New Roman', 16), width=10)
-entry.pack(pady=5)
-
-frame = tk.Frame(root)
-frame.pack(pady=10)
-
-button1 = tk.Button(frame, text='Enter', height=2, width=10, command=equals)
-button1.grid(row=0, column=0, padx=5)
-
-button2 = tk.Button(frame, text='Clear', height=2, width=10, command=clear)
-button2.grid(row=0, column=1, padx=5)
-root.mainloop()
+        angle = calculate_angle(hour, minute)
+        if angle is not None:
+            st.success(f"✅ The angle between the hands is **{angle:.2f}°**.")
+        else:
+            st.error("❌ Invalid time input.")
